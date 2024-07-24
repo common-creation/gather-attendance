@@ -1,0 +1,17 @@
+# EXAMPLE USAGE:
+#
+#   Refer for explanation to following link:
+#   https://github.com/evilmartians/lefthook/blob/master/docs/configuration.md
+#
+pre-commit:
+  parallel: false
+  commands:
+    biome-format:
+      skip: false
+      priority: 1
+      run: npm run format
+      stage_fixed: true
+    biome-lint:
+      skip: false
+      priority: 2
+      run: npm run lint

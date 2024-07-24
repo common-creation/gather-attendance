@@ -1,0 +1,24 @@
+{
+	"name": "gather-attendance",
+	"module": "index.ts",
+	"type": "module",
+	"dependencies": {
+		"@biomejs/biome": "^1.8.3",
+		"@gathertown/gather-game-client": "^43.0.1",
+		"@types/node": "^20.14.12",
+		"dayjs": "^1.11.12",
+		"fastq": "^1.17.1",
+		"google-auth-library": "^9.11.0",
+		"google-spreadsheet": "^4.1.2",
+		"isomorphic-ws": "^5.0.0",
+		"lefthook": "^1.7.7",
+		"tsx": "^4.16.2",
+		"typescript": "^5.5.4",
+		"ws": "^8.18.0"
+	},
+	"scripts": {
+		"postinstall": "lefthook install",
+		"lint": "biome check .",
+		"format": "biome format --write ."
+	}
+}

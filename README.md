@@ -1,0 +1,3 @@
+# gather-attendance
+
+Gatherの入退室ログをGoogleスプレッドシートに残したり残さなかったりする
