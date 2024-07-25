@@ -65,47 +65,46 @@ const doc = new GoogleSpreadsheet(
 const gather = new Game(GATHER_SPACE_ID, () =>
 	Promise.resolve({ apiKey: GATHER_API_KEY }),
 );
-main();
 
 gather.subscribeToConnection((connected) => {
 	console.debug("connected", connected);
 });
+
 gather.subscribeToDisconnection((code, reason) => {
 	console.debug("disconnected. trying to reconnect | reason:", code, reason);
-	main();
+	gather.connect();
 });
 
-function main() {
-	gather.connect();
+gather.subscribeToEvent("playerJoins", async (event) => {
+	const now = dayjs().tz("Asia/Tokyo");
 
-	gather.subscribeToEvent("playerJoins", async (event) => {
-		const now = dayjs().tz("Asia/Tokyo");
+	console.debug("playerJoins", event.playerJoins);
+	const uid = gather.getPlayerUidFromEncId(event.playerJoins.encId);
+	if (!uid) {
+		console.error("No uid found for encId:", event.playerJoins.encId);
+		return;
+	}
+	console.debug("encId:", event.playerJoins.encId, "uid:", uid);
 
-		console.debug("playerJoins", event.playerJoins);
-		const uid = gather.getPlayerUidFromEncId(event.playerJoins.encId);
-		if (!uid) {
-			console.error("No uid found for encId:", event.playerJoins.encId);
-			return;
-		}
-		console.debug("encId:", event.playerJoins.encId, "uid:", uid);
+	syncPlayerQueue.push({ uid });
+	addAttendanceQueue.push({ d: now, uid, event: "入室" });
+});
 
-		syncPlayerQueue.push({ uid });
-		addAttendanceQueue.push({ d: now, uid, event: "入室" });
-	});
-	gather.subscribeToEvent("playerExits", async (event) => {
-		const now = dayjs().tz("Asia/Tokyo");
+gather.subscribeToEvent("playerExits", async (event) => {
+	const now = dayjs().tz("Asia/Tokyo");
 
-		console.debug("playerExits", event.playerExits);
-		const uid = gather.getPlayerUidFromEncId(event.playerExits.encId);
-		if (!uid) {
-			console.error("No uid found for encId:", event.playerExits.encId);
-			return;
-		}
-		console.debug("encId:", event.playerExits.encId, "uid:", uid);
+	console.debug("playerExits", event.playerExits);
+	const uid = gather.getPlayerUidFromEncId(event.playerExits.encId);
+	if (!uid) {
+		console.error("No uid found for encId:", event.playerExits.encId);
+		return;
+	}
+	console.debug("encId:", event.playerExits.encId, "uid:", uid);
 
-		addAttendanceQueue.push({ d: now, uid, event: "退室" });
-	});
-}
+	addAttendanceQueue.push({ d: now, uid, event: "退室" });
+});
+
+gather.connect();
 
 function getPlayer(uid: string) {
 	// biome-ignore lint/suspicious/noAsyncPromiseExecutor: だってしょうがないじゃん
