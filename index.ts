@@ -5,7 +5,10 @@ import dayjsUtc from "dayjs/plugin/utc";
 import * as fastq from "fastq";
 import type { queueAsPromised } from "fastq";
 import { JWT } from "google-auth-library";
-import { GoogleSpreadsheet } from "google-spreadsheet";
+import {
+	GoogleSpreadsheet,
+	type GoogleSpreadsheetCell,
+} from "google-spreadsheet";
 import WebSocket from "isomorphic-ws";
 
 dayjs.extend(dayjsUtc);
@@ -121,66 +124,97 @@ function getPlayer(uid: string) {
 }
 
 async function syncPlayer(args: SyncTask) {
-	const player = await getPlayer(args.uid);
-	console.debug("uid:", args.uid, "name:", player.name);
+	console.log("syncPlayer()", { uid: args.uid });
 
-	await doc.loadInfo();
-	// biome-ignore lint/complexity/useLiteralKeys: 日本語で直接アクセスするのはキモすぎやろがい
-	let userSheet = doc.sheetsByTitle["ユーザーマスタ"];
-	if (!userSheet) {
-		await doc.addSheet({ title: "ユーザーマスタ" });
+	try {
+		const player = await getPlayer(args.uid);
+		console.debug("uid:", args.uid, "name:", player.name);
+
+		await doc.loadInfo();
 		// biome-ignore lint/complexity/useLiteralKeys: 日本語で直接アクセスするのはキモすぎやろがい
-		userSheet = doc.sheetsByTitle["ユーザーマスタ"];
-	}
-
-	await userSheet.loadCells();
-
-	for (let y = 0; ; y++) {
-		const Ax = await userSheet.getCell(y, 0);
-		if (Ax.value === player.id) {
-			const Bx = await userSheet.getCell(y, 1);
-			Bx.value = player.name;
-			await Bx.save();
-			break;
+		let userSheet = doc.sheetsByTitle["ユーザーマスタ"];
+		if (!userSheet) {
+			await doc.addSheet({ title: "ユーザーマスタ" });
+			// biome-ignore lint/complexity/useLiteralKeys: 日本語で直接アクセスするのはキモすぎやろがい
+			userSheet = doc.sheetsByTitle["ユーザーマスタ"];
 		}
-		if (!Ax.value) {
-			Ax.value = player.id;
-			const Bx = await userSheet.getCell(y, 1);
-			Bx.value = player.name;
-			await Promise.all([Ax.save(), Bx.save()]);
-			break;
+
+		await userSheet.loadCells();
+
+		for (let y = 0; ; y++) {
+			const Ax = await userSheet.getCell(y, 0);
+			if (Ax.value === player.id) {
+				const Bx = await userSheet.getCell(y, 1);
+				Bx.value = player.name;
+				await Bx.save();
+				break;
+			}
+			if (!Ax.value) {
+				Ax.value = player.id;
+				const Bx = await userSheet.getCell(y, 1);
+				Bx.value = player.name;
+				await Promise.all([Ax.save(), Bx.save()]);
+				break;
+			}
 		}
+	} catch (e) {
+		console.error(e);
 	}
 }
 
 const cachedNextLogRow: { [key: string]: number } = {};
 
 async function addAttendance(args: AddAttendanceTask) {
-	await doc.loadInfo();
+	console.log("addAttendance()", { uid: args.uid, event: args.event });
 
-	const thisMonth = dayjs(args.d).tz("Asia/Tokyo").format("YYYY-MM");
-	let thisMonthSheet = doc.sheetsByTitle[thisMonth];
-	if (!thisMonthSheet) {
-		await doc.addSheet({ title: thisMonth });
-		thisMonthSheet = doc.sheetsByTitle[thisMonth];
-	}
+	try {
+		await doc.loadInfo();
 
-	await thisMonthSheet.loadCells();
-
-	for (let y = cachedNextLogRow[thisMonth] || 0; ; y++) {
-		const y1 = await thisMonthSheet.getCell(y, 0);
-		if (!y1.value) {
-			y1.value = args.uid;
-			const [y2, y3] = await Promise.all([
-				thisMonthSheet.getCell(y, 1),
-				thisMonthSheet.getCell(y, 2),
-			]);
-			y2.value = args.d.format("YYYY/MM/DD HH:mm:ss");
-			y3.value = args.event;
-			await Promise.all([y1.save(), y2.save(), y3.save()]);
-
-			cachedNextLogRow[thisMonth] = y + 1;
-			break;
+		const thisMonth = dayjs(args.d).tz("Asia/Tokyo").format("YYYY-MM");
+		let thisMonthSheet = doc.sheetsByTitle[thisMonth];
+		if (!thisMonthSheet) {
+			await doc.addSheet({ title: thisMonth });
+			thisMonthSheet = doc.sheetsByTitle[thisMonth];
 		}
+
+		await thisMonthSheet.loadCells();
+
+		for (let y = cachedNextLogRow[thisMonth] || 0; ; y++) {
+			if (y === 1000) {
+			}
+			let y1: GoogleSpreadsheetCell;
+			try {
+				y1 = await thisMonthSheet.getCell(y, 0);
+			} catch (e) {
+				console.error(e);
+				await thisMonthSheet.resize({ rowCount: y + 1000, columnCount: 3 });
+				console.log("resize:", y + 1000, 3);
+				await thisMonthSheet.loadCells();
+				y1 = await thisMonthSheet.getCell(y, 0);
+			}
+			if (!y1.value) {
+				y1.value = args.uid;
+				const [y2, y3] = await Promise.all([
+					thisMonthSheet.getCell(y, 1),
+					thisMonthSheet.getCell(y, 2),
+				]);
+				y2.value = args.d.format("YYYY/MM/DD HH:mm:ss");
+				y3.value = args.event;
+				console.log(
+					"row:",
+					y,
+					"data:",
+					args.uid,
+					args.d.format("YYYY/MM/DD HH:mm:ss"),
+					args.event,
+				);
+				await Promise.all([y1.save(), y2.save(), y3.save()]);
+
+				cachedNextLogRow[thisMonth] = y + 1;
+				break;
+			}
+		}
+	} catch (e) {
+		console.error(e);
 	}
 }
