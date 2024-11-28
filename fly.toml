@@ -1,0 +1,27 @@
+# fly.toml app configuration file generated for gather-attendance on 2024-11-29T07:20:22+09:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'gather-attendance'
+primary_region = 'iad'
+swap_size_mb = 512
+
+[build]
+  dockerfile = './Dockerfile'
+
+[deploy]
+  strategy = 'rolling'
+
+[env]
+  GATHER_SPACE_ID = 'y1DUM6Xga59dtQ1S/cc'
+  GOOGLE_SPREAD_SHEET_ID = '1MwwJlJRjX7D5XQv6yHGqw-Df2TJ1AQh7gNNDEKp39OI'
+  GOOGLE_SERVICE_ACCOUNT_EMAIL = 'gather-attendance@backoffice-430406.iam.gserviceaccount.com'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'
+
+[[restart]]
+  policy = 'always'
+  retries = 99

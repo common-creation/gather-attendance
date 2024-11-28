@@ -60,7 +60,7 @@ const doc = new GoogleSpreadsheet(
 	GOOGLE_SPREAD_SHEET_ID,
 	new JWT({
 		email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-		key: GOOGLE_PRIVATE_KEY,
+		key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
 		scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 	}),
 );
